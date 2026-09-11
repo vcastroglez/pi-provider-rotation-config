@@ -77,7 +77,7 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("turn_end", async (event, ctx) => {
 		const message = event.message;
-		if (message.role !== "assistant" || message.stopReason !== "error") return;
+		if (message.role !== "assistant" || (message.stopReason !== "error" && message.stopReason !== "length")) return;
 		const error = message.errorMessage ?? "";
 		if (activeProvider === "openrouter") {
 			if (error.includes("free-models-per-day")) await switchToDirectProvider(ctx);
