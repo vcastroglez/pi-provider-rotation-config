@@ -29,15 +29,32 @@ export default function (pi: ExtensionAPI) {
 		apiKey: "$GROQ_API_KEY",
 		models: [{ id: "openai/gpt-oss-20b", reasoning: false, input: ["text"], contextWindow: 131072, maxTokens: 65536, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }],
 	});
+	pi.registerProvider("huggingface-direct", {
+		baseUrl: "https://router.huggingface.co/v1",
+		api: "openai-completions",
+		apiKey: "$HF_TOKEN",
+		models: [{ id: "Qwen/Qwen2.5-7B-Instruct", reasoning: false, input: ["text"], contextWindow: 32768, maxTokens: 8192, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }],
+	});
 
 	let openrouterIndex = -1;
 	let activeProvider = "openrouter";
+	const directFallbacks = [
+		["groq-direct", "openai/gpt-oss-20b"],
+		["huggingface-direct", "Qwen/Qwen2.5-7B-Instruct"],
+	] as const;
+	let directIndex = -1;
 
-	const switchToGroq = async (ctx: ExtensionContext) => {
-		const model = ctx.modelRegistry.find("groq-direct", "openai/gpt-oss-20b");
-		if (!model || !(await pi.setModel(model))) return false;
-		activeProvider = "groq-direct";
-		return true;
+	const switchToDirectProvider = async (ctx: ExtensionContext) => {
+		while (directIndex < directFallbacks.length - 1) {
+			directIndex += 1;
+			const [provider, modelId] = directFallbacks[directIndex];
+			const model = ctx.modelRegistry.find(provider, modelId);
+			if (model && await pi.setModel(model)) {
+				activeProvider = provider;
+				return true;
+			}
+		}
+		return false;
 	};
 
 	pi.on("before_provider_request", (event) => {
@@ -63,10 +80,10 @@ export default function (pi: ExtensionAPI) {
 		if (message.role !== "assistant" || message.stopReason !== "error") return;
 		const error = message.errorMessage ?? "";
 		if (activeProvider === "openrouter") {
-			if (error.includes("free-models-per-day")) await switchToGroq(ctx);
+			if (error.includes("free-models-per-day")) await switchToDirectProvider(ctx);
 			else if (openrouterIndex < OPENROUTER_FREE_MODELS.length - 1) openrouterIndex += 1;
 		} else if (activeProvider === "groq-direct") {
-			// Leave Groq selected after its own failures; no paid provider is configured.
+			await switchToDirectProvider(ctx);
 		}
 	});
 }
