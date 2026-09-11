@@ -27,7 +27,7 @@ export default function (pi: ExtensionAPI) {
 		baseUrl: "https://api.groq.com/openai/v1",
 		api: "openai-completions",
 		apiKey: "$GROQ_API_KEY",
-		models: [{ id: "openai/gpt-oss-20b", reasoning: false, input: ["text"], contextWindow: 131072, maxTokens: 65536, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }],
+		models: [{ id: "openai/gpt-oss-20b", reasoning: false, input: ["text"], contextWindow: 7000, maxTokens: 1024, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }],
 	});
 	pi.registerProvider("huggingface-direct", {
 		baseUrl: "https://router.huggingface.co/v1",
